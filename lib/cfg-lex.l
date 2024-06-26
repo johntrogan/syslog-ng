@@ -281,6 +281,7 @@ filterx_word	[^ \#'"/\(\)\{\}\[\]\\;\r\n\t,|\.@:]
 %x qstring
 %x slash_string
 %x block
+%x block_arg
 %x block_content
 %x block_string
 %x block_qstring
@@ -347,7 +348,7 @@ filterx_word	[^ \#'"/\(\)\{\}\[\]\\;\r\n\t,|\.@:]
 
     /* and this is the version in filterx, which only allows "traditional" identifiers */
 <filterx>[a-zA-Z][_a-zA-Z0-9]* 	   { return cfg_lexer_map_word_to_token(yyextra, yylval, yylloc, yytext); }
-<filterx>\$\{({filterx_word}+(\.)?)*{filterx_word}+\}   { yylval->cptr = strndup(yytext+2, strlen(yytext) - 3); return LL_MESSAGE_REF; }
+<filterx>\$\{([^}]+)\}   { yylval->cptr = strndup(yytext+2, strlen(yytext) - 3); return LL_MESSAGE_REF; }
 <INITIAL>\,	   	   ;
 
 <INITIAL,filterx>\"        {
@@ -489,10 +490,45 @@ filterx_word	[^ \#'"/\(\)\{\}\[\]\\;\r\n\t,|\.@:]
 
                            }
 
-
 <block_content>[^{}()\"\'\n\r#]+   {
                              g_string_append(yyextra->string_buffer, yytext);
                            }
+
+<block_arg>[\(\[\{]        {
+                             g_string_append_c(yyextra->string_buffer, yytext[0]);
+                             yyextra->brace_count++;
+                           }
+<block_arg>[\)\]\}]        {
+                             if (yyextra->brace_count > 0)
+                               {
+                                 g_string_append_c(yyextra->string_buffer, yytext[0]);
+                                 yyextra->brace_count--;
+                               }
+                             else
+                               {
+                                 yy_pop_state(yyscanner);
+                                 yylval->cptr = strdup(yyextra->string_buffer->str);
+                                 unput(')');
+                                 return LL_BLOCK;
+                               }
+                           }
+
+
+<block_arg>,               {
+                             if (yyextra->brace_count > 0)
+                               {
+                                 g_string_append_c(yyextra->string_buffer, yytext[0]);
+                               }
+                             else
+                               {
+                                 yy_pop_state(yyscanner);
+                                 yylval->cptr = strdup(yyextra->string_buffer->str);
+                                 unput(',');
+                                 return LL_BLOCK;
+                               }
+                           }
+<block_arg>[^\[\]\{\}\(\),]   { g_string_append_c(yyextra->string_buffer, yytext[0]); }
+
 
 <block_string>[^\\"\r\n]+  { g_string_append(yyextra->string_buffer, yytext); }
 <block_string>\\.          { g_string_append(yyextra->string_buffer, yytext); }
@@ -554,6 +590,14 @@ cfg_lexer_start_block_state(CfgLexer *self, const gchar block_boundary[2])
 {
   memcpy(&self->block_boundary, block_boundary, sizeof(self->block_boundary));
   yy_push_state(block, self->state);
+}
+
+void
+cfg_lexer_start_block_arg_state(CfgLexer *self)
+{
+  g_string_truncate(self->string_buffer, 0);
+  self->brace_count = 0;
+  yy_push_state(block_arg, self->state);
 }
 
 void

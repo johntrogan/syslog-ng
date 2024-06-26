@@ -1173,3 +1173,68 @@ def test_regexp_search_error_in_pattern(config, syslog_ng):
     )
     with pytest.raises(Exception):
         syslog_ng.start(config)
+
+
+def test_parse_kv_default_option_set_is_skippable(config, syslog_ng):
+    (file_true, file_false) = create_config(
+        config, """
+    $MSG = parse_kv("foo=bar, thisisstray bar=baz");
+    """,
+    )
+    syslog_ng.start(config)
+
+    assert file_true.get_stats()["processed"] == 1
+    assert "processed" not in file_false.get_stats()
+    assert file_true.read_log() == '{"foo":"bar","bar":"baz"}\n'
+
+
+def test_parse_kv_value_separator(config, syslog_ng):
+    (file_true, file_false) = create_config(
+        config, """
+    $MSG = parse_kv("foo@bar, bar@baz", value_separator="@");
+    """,
+    )
+    syslog_ng.start(config)
+
+    assert file_true.get_stats()["processed"] == 1
+    assert "processed" not in file_false.get_stats()
+    assert file_true.read_log() == "{\"foo\":\"bar\",\"bar\":\"baz\"}\n"
+
+
+def test_parse_kv_value_separator_use_first_character(config, syslog_ng):
+    (file_true, file_false) = create_config(
+        config, """
+    $MSG = parse_kv("foo@bar, bar@baz", value_separator="@!$");
+    """,
+    )
+    syslog_ng.start(config)
+
+    assert file_true.get_stats()["processed"] == 1
+    assert "processed" not in file_false.get_stats()
+    assert file_true.read_log() == "{\"foo\":\"bar\",\"bar\":\"baz\"}\n"
+
+
+def test_parse_kv_pair_separator(config, syslog_ng):
+    (file_true, file_false) = create_config(
+        config, """
+    $MSG = parse_kv("foo=bar#bar=baz", pair_separator="#");
+    """,
+    )
+    syslog_ng.start(config)
+
+    assert file_true.get_stats()["processed"] == 1
+    assert "processed" not in file_false.get_stats()
+    assert file_true.read_log() == "{\"foo\":\"bar\",\"bar\":\"baz\"}\n"
+
+
+def test_parse_kv_stray_words_value_name(config, syslog_ng):
+    (file_true, file_false) = create_config(
+        config, """
+    $MSG = parse_kv("foo=bar, thisisstray bar=baz", stray_words_key="stray_words");
+    """,
+    )
+    syslog_ng.start(config)
+
+    assert file_true.get_stats()["processed"] == 1
+    assert "processed" not in file_false.get_stats()
+    assert file_true.read_log() == "{\"foo\":\"bar\",\"bar\":\"baz\",\"stray_words\":\"thisisstray\"}\n"

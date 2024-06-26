@@ -75,28 +75,13 @@ Test(filterx_expr, test_filterx_literal_evaluates_to_the_literal_object)
 
 Test(filterx_expr, test_filterx_template_evaluates_to_the_expanded_value)
 {
-  LogMessage *msg = create_sample_message();
-  FilterXScope *scope = filterx_scope_new();
-
-  FilterXEvalContext context =
-  {
-    .msgs = &msg,
-    .num_msg = 1,
-    .template_eval_options = &DEFAULT_TEMPLATE_EVAL_OPTIONS,
-    .scope = scope,
-  };
-
-  filterx_eval_set_context(&context);
   FilterXExpr *fexpr = filterx_template_new(compile_template("$HOST $PROGRAM"));
   FilterXObject *fobj = filterx_expr_eval(fexpr);
 
   assert_marshaled_object(fobj, "bzorp syslog-ng", LM_VT_STRING);
 
   filterx_expr_unref(fexpr);
-  log_msg_unref(msg);
   filterx_object_unref(fobj);
-  filterx_scope_unref(scope);
-  filterx_eval_set_context(NULL);
 }
 
 struct _FilterXScope
@@ -107,24 +92,11 @@ struct _FilterXScope
 
 Test(filterx_expr, test_filterx_list_merge)
 {
-  LogMessage *msg = create_sample_message();
-  FilterXScope *scope = filterx_scope_new();
-
-  FilterXEvalContext context =
-  {
-    .msgs = &msg,
-    .num_msg = 1,
-    .template_eval_options = &DEFAULT_TEMPLATE_EVAL_OPTIONS,
-    .scope = scope,
-  };
-  filterx_eval_set_context(&context);
-
   // $fillable = json_array();
   FilterXObject *json_array = filterx_json_array_new_empty();
   FilterXExpr *fillable = filterx_literal_new(json_array);
   FilterXExpr *list_expr = NULL;
   FilterXObject *result = NULL;
-  gboolean success = FALSE;
   GList *values = NULL, *inner_values = NULL;
   guint64 len;
 
@@ -140,8 +112,7 @@ Test(filterx_expr, test_filterx_list_merge)
   // $fillable += [42];
   result = filterx_expr_eval(list_expr);
   cr_assert(result);
-  cr_assert(filterx_boolean_unwrap(result, &success));
-  cr_assert(success);
+  cr_assert(filterx_object_truthy(result));
   cr_assert(filterx_object_len(json_array, &len));
   cr_assert_eq(len, 1);
   _assert_int_value_and_unref(filterx_list_get_subscript(json_array, 0), 42);
@@ -150,8 +121,7 @@ Test(filterx_expr, test_filterx_list_merge)
   // $fillable += [42];
   result = filterx_expr_eval(list_expr);
   cr_assert(result);
-  cr_assert(filterx_boolean_unwrap(result, &success));
-  cr_assert(success);
+  cr_assert(filterx_object_truthy(result));
   cr_assert(filterx_object_len(json_array, &len));
   cr_assert_eq(len, 2);
   _assert_int_value_and_unref(filterx_list_get_subscript(json_array, 0), 42);
@@ -175,8 +145,7 @@ Test(filterx_expr, test_filterx_list_merge)
   // $fillable += [[1337]];
   result = filterx_expr_eval(list_expr);
   cr_assert(result);
-  cr_assert(filterx_boolean_unwrap(result, &success));
-  cr_assert(success);
+  cr_assert(filterx_object_truthy(result));
   cr_assert(filterx_object_len(json_array, &len));
   cr_assert_eq(len, 3);
 
@@ -193,31 +162,15 @@ Test(filterx_expr, test_filterx_list_merge)
 
 
   filterx_expr_unref(fillable);
-  log_msg_unref(msg);
-  filterx_scope_unref(scope);
-  filterx_eval_set_context(NULL);
 }
 
 Test(filterx_expr, test_filterx_dict_merge)
 {
-  LogMessage *msg = create_sample_message();
-  FilterXScope *scope = filterx_scope_new();
-
-  FilterXEvalContext context =
-  {
-    .msgs = &msg,
-    .num_msg = 1,
-    .template_eval_options = &DEFAULT_TEMPLATE_EVAL_OPTIONS,
-    .scope = scope,
-  };
-  filterx_eval_set_context(&context);
-
   // $fillable = json();
   FilterXObject *json = filterx_json_object_new_empty();
   FilterXExpr *fillable = filterx_literal_new(json);
   FilterXExpr *dict_expr = NULL;
   FilterXObject *result = NULL;
-  gboolean success = FALSE;
   GList *values = NULL, *inner_values = NULL;
   guint64 len;
 
@@ -237,8 +190,7 @@ Test(filterx_expr, test_filterx_dict_merge)
   // $fillable += {"foo": 42};
   result = filterx_expr_eval(dict_expr);
   cr_assert(result);
-  cr_assert(filterx_boolean_unwrap(result, &success));
-  cr_assert(success);
+  cr_assert(filterx_object_truthy(result));
   cr_assert(filterx_object_len(json, &len));
   cr_assert_eq(len, 1);
   _assert_int_value_and_unref(filterx_object_get_subscript(json, foo), 42);
@@ -247,8 +199,7 @@ Test(filterx_expr, test_filterx_dict_merge)
   // $fillable += {"foo": 42};
   result = filterx_expr_eval(dict_expr);
   cr_assert(result);
-  cr_assert(filterx_boolean_unwrap(result, &success));
-  cr_assert(success);
+  cr_assert(filterx_object_truthy(result));
   cr_assert(filterx_object_len(json, &len));
   cr_assert_eq(len, 1);
   _assert_int_value_and_unref(filterx_object_get_subscript(json, foo), 42);
@@ -268,8 +219,7 @@ Test(filterx_expr, test_filterx_dict_merge)
   // $fillable += {"foo": 420};
   result = filterx_expr_eval(dict_expr);
   cr_assert(result);
-  cr_assert(filterx_boolean_unwrap(result, &success));
-  cr_assert(success);
+  cr_assert(filterx_object_truthy(result));
   cr_assert(filterx_object_len(json, &len));
   cr_assert_eq(len, 1);
   _assert_int_value_and_unref(filterx_object_get_subscript(json, foo), 420);
@@ -289,8 +239,7 @@ Test(filterx_expr, test_filterx_dict_merge)
   // $fillable += {"bar": 1337};
   result = filterx_expr_eval(dict_expr);
   cr_assert(result);
-  cr_assert(filterx_boolean_unwrap(result, &success));
-  cr_assert(success);
+  cr_assert(filterx_object_truthy(result));
   cr_assert(filterx_object_len(json, &len));
   cr_assert_eq(len, 2);
   _assert_int_value_and_unref(filterx_object_get_subscript(json, foo), 420);
@@ -314,8 +263,7 @@ Test(filterx_expr, test_filterx_dict_merge)
   // $fillable += {"baz": {"foo": 1}};
   result = filterx_expr_eval(dict_expr);
   cr_assert(result);
-  cr_assert(filterx_boolean_unwrap(result, &success));
-  cr_assert(success);
+  cr_assert(filterx_object_truthy(result));
   cr_assert(filterx_object_len(json, &len));
   cr_assert_eq(len, 3);
 
@@ -332,8 +280,7 @@ Test(filterx_expr, test_filterx_dict_merge)
   // Shallow merge.
   result = filterx_expr_eval(dict_expr);
   cr_assert(result);
-  cr_assert(filterx_boolean_unwrap(result, &success));
-  cr_assert(success);
+  cr_assert(filterx_object_truthy(result));
   cr_assert(filterx_object_len(json, &len));
   cr_assert_eq(len, 3);
 
@@ -353,25 +300,10 @@ Test(filterx_expr, test_filterx_dict_merge)
   filterx_object_unref(bar);
   filterx_object_unref(foo);
   filterx_expr_unref(fillable);
-  log_msg_unref(msg);
-  filterx_scope_unref(scope);
-  filterx_eval_set_context(NULL);
 }
 
 Test(filterx_expr, test_filterx_assign)
 {
-  LogMessage *msg = create_sample_message();
-  FilterXScope *scope = filterx_scope_new();
-
-  FilterXEvalContext context =
-  {
-    .msgs = &msg,
-    .num_msg = 1,
-    .template_eval_options = &DEFAULT_TEMPLATE_EVAL_OPTIONS,
-    .scope = scope,
-  };
-  filterx_eval_set_context(&context);
-
   FilterXExpr *result_var = filterx_msg_variable_expr_new("$result-var");
   cr_assert(result_var != NULL);
 
@@ -379,8 +311,10 @@ Test(filterx_expr, test_filterx_assign)
 
   FilterXObject *res = filterx_expr_eval(assign);
   cr_assert_not_null(res);
-  cr_assert(filterx_object_is_type(res, &FILTERX_TYPE_NAME(boolean)));
+  cr_assert(filterx_object_is_type(res, &FILTERX_TYPE_NAME(string)));
+  cr_assert_str_eq(filterx_string_get_value(res, NULL), "foobar");
   cr_assert(filterx_object_truthy(res));
+  cr_assert(assign->ignore_falsy_result);
 
   cr_assert_not_null(result_var);
   FilterXObject *result_obj = filterx_expr_eval(result_var);
@@ -392,25 +326,10 @@ Test(filterx_expr, test_filterx_assign)
   filterx_object_unref(res);
   filterx_expr_unref(assign);
   filterx_object_unref(result_obj);
-  log_msg_unref(msg);
-  filterx_scope_unref(scope);
-  filterx_eval_set_context(NULL);
 }
 
 Test(filterx_expr, test_filterx_setattr)
 {
-  LogMessage *msg = create_sample_message();
-  FilterXScope *scope = filterx_scope_new();
-
-  FilterXEvalContext context =
-  {
-    .msgs = &msg,
-    .num_msg = 1,
-    .template_eval_options = &DEFAULT_TEMPLATE_EVAL_OPTIONS,
-    .scope = scope,
-  };
-  filterx_eval_set_context(&context);
-
   FilterXObject *json = filterx_json_object_new_empty();
   FilterXExpr *fillable = filterx_literal_new(json);
 
@@ -419,31 +338,40 @@ Test(filterx_expr, test_filterx_setattr)
 
   FilterXObject *res = filterx_expr_eval(setattr);
   cr_assert_not_null(res);
-  cr_assert(filterx_object_is_type(res, &FILTERX_TYPE_NAME(boolean)));
+  cr_assert(filterx_object_is_type(res, &FILTERX_TYPE_NAME(string)));
+  cr_assert_str_eq(filterx_string_get_value(res, NULL), "bar");
   cr_assert(filterx_object_truthy(res));
+  cr_assert(setattr->ignore_falsy_result);
 
   assert_object_json_equals(json, "{\"foo\":\"bar\"}");
 
   filterx_expr_unref(setattr);
-  log_msg_unref(msg);
-  filterx_scope_unref(scope);
-  filterx_eval_set_context(NULL);
+}
+
+Test(filterx_expr, test_filterx_set_subscript)
+{
+  FilterXObject *json = filterx_json_object_new_empty();
+  FilterXExpr *fillable = filterx_literal_new(json);
+
+  FilterXExpr *setattr = filterx_set_subscript_new(fillable,
+                                                   filterx_literal_new(filterx_string_new("foo", -1)),
+                                                   filterx_literal_new(filterx_string_new("bar", -1)));
+  cr_assert_not_null(setattr);
+
+  FilterXObject *res = filterx_expr_eval(setattr);
+  cr_assert_not_null(res);
+  cr_assert(filterx_object_is_type(res, &FILTERX_TYPE_NAME(string)));
+  cr_assert_str_eq(filterx_string_get_value(res, NULL), "bar");
+  cr_assert(filterx_object_truthy(res));
+  cr_assert(setattr->ignore_falsy_result);
+
+  assert_object_json_equals(json, "{\"foo\":\"bar\"}");
+
+  filterx_expr_unref(setattr);
 }
 
 Test(filterx_expr, test_filterx_readonly)
 {
-  LogMessage *msg = create_sample_message();
-  FilterXScope *scope = filterx_scope_new();
-
-  FilterXEvalContext context =
-  {
-    .msgs = &msg,
-    .num_msg = 1,
-    .template_eval_options = &DEFAULT_TEMPLATE_EVAL_OPTIONS,
-    .scope = scope,
-  };
-  filterx_eval_set_context(&context);
-
   FilterXObject *foo = filterx_string_new("foo", -1);
   FilterXObject *bar = filterx_string_new("bar", -1);
 
@@ -503,9 +431,6 @@ Test(filterx_expr, test_filterx_readonly)
   filterx_expr_unref(literal);
   filterx_object_unref(bar);
   filterx_object_unref(foo);
-  log_msg_unref(msg);
-  filterx_scope_unref(scope);
-  filterx_eval_set_context(NULL);
 }
 
 static void

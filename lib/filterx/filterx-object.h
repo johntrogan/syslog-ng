@@ -87,7 +87,7 @@ struct _FilterXObject
    *                          propagates to the inner elements lazily
    *
    */
-  guint thread_index:16, modified_in_place:1, readonly:1;
+  guint thread_index:16, modified_in_place:1, readonly:1, weak_referenced:1;
   FilterXType *type;
 };
 
@@ -98,6 +98,7 @@ FilterXObject *filterx_object_new(FilterXType *type);
 FilterXObject *filterx_object_ref(FilterXObject *self);
 void filterx_object_unref(FilterXObject *self);
 gboolean filterx_object_freeze(FilterXObject *self);
+gboolean filterx_object_is_frozen(FilterXObject *self);
 void filterx_object_unfreeze_and_free(FilterXObject *self);
 void filterx_object_init_instance(FilterXObject *self, FilterXType *type);
 void filterx_object_free_method(FilterXObject *self);
@@ -135,6 +136,16 @@ filterx_object_repr(FilterXObject *self, GString *repr)
   if (self->type->repr)
     {
       g_string_truncate(repr, 0);
+      return self->type->repr(self, repr);
+    }
+  return FALSE;
+}
+
+static inline gboolean
+filterx_object_repr_append(FilterXObject *self, GString *repr)
+{
+  if (self->type->repr)
+    {
       return self->type->repr(self, repr);
     }
   return FALSE;

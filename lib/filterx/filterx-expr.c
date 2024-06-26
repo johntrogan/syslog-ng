@@ -31,7 +31,7 @@ filterx_expr_set_location(FilterXExpr *self, CfgLexer *lexer, CFG_LTYPE *lloc)
   self->lloc = *lloc;
   if (debug_flag)
     {
-      GString *res = g_string_sized_new(lloc->last_column - lloc->first_column);
+      GString *res = g_string_sized_new(0);
       cfg_source_extract_source_text(lexer, lloc, res);
       self->expr_text = g_string_free(res, FALSE);
     }
@@ -123,4 +123,23 @@ filterx_binary_op_init_instance(FilterXBinaryOp *self, FilterXExpr *lhs, FilterX
   self->super.free_fn = filterx_binary_op_free_method;
   self->lhs = lhs;
   self->rhs = rhs;
+}
+
+gboolean
+filterx_expr_list_eval(GList *expressions, FilterXObject **result)
+{
+  *result = NULL;
+  for (GList *elem = expressions; elem; elem = elem->next)
+    {
+      filterx_object_unref(*result);
+
+      FilterXExpr *expr = elem->data;
+      *result = filterx_expr_eval(expr);
+
+      if (!(*result) ||
+          (!expr->ignore_falsy_result && filterx_object_falsy(*result)))
+        return FALSE;
+    }
+
+  return TRUE;
 }

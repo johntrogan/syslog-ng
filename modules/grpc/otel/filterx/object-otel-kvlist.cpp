@@ -154,10 +154,7 @@ KVList::get_subscript(FilterXObject *key)
   ProtobufField *converter = otel_converter_by_type(FieldDescriptor::TYPE_MESSAGE);
   KeyValue *kv = get_mutable_kv_for_key(key_c_str);
   if (!kv)
-    {
-      kv = repeated_kv->Add();
-      kv->set_key(key_c_str);
-    }
+    return NULL;
 
   return converter->Get(kv, "value");
 }
@@ -507,7 +504,6 @@ OtelKVListField::FilterXObjectSetter(google::protobuf::Message *message, ProtoRe
 
   delete filterx_kvlist->cpp;
   filterx_kvlist->cpp = new_kvlist;
-  *assoc_object = filterx_object_ref(object);
 
   return true;
 }
