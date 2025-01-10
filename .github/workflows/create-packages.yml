@@ -21,7 +21,6 @@ on:
           "ubuntu-focal",
           "ubuntu-jammy",
           "ubuntu-noble",
-          "ubuntu-lunar",
           "almalinux-8",
           "almalinux-9",
           "centos-stream9",
@@ -34,7 +33,8 @@ jobs:
   create-packages:
     name: ${{ matrix.distro }}
 
-    runs-on: ubuntu-latest
+    # FIXME: temporary because sudo doesn't work in RedHat and descendants on an ubuntu-24.04 hosts
+    runs-on: ubuntu-22.04
 
     strategy:
       matrix:
